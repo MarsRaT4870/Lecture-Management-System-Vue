@@ -33,3 +33,12 @@ export function delRegistration(regId) {
     method: 'delete'
   })
 }
+
+// 活动签到
+export function checkInUser(data) {
+  return request({
+    url: '/biz/registration/checkin',
+    method: 'post',
+    data: data
+  })
+}

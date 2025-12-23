@@ -42,3 +42,11 @@ export function delActivity(activityId) {
     method: 'delete'
   })
 }
+
+// 获取首页统计数据
+export function getActivityStats() {
+  return request({
+    url: '/biz/activity/stats',
+    method: 'get'
+  })
+}

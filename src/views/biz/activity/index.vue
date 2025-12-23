@@ -50,6 +50,8 @@
       </el-table-column>
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template #default="scope">
+          <el-button link type="primary" icon="Plus" @click="handleJoin(scope.row)">我要报名</el-button>
+          
           <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)">修改</el-button>
           <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)">删除</el-button>
         </template>
@@ -78,6 +80,11 @@
         <el-form-item label="活动地点" prop="location">
           <el-input v-model="form.location" placeholder="请输入活动地点" />
         </el-form-item>
+        
+        <el-form-item label="签到码" prop="checkinCode">
+           <el-input v-model="form.checkinCode" placeholder="请输入签到码" />
+        </el-form-item>
+
         <el-form-item label="最大人数" prop="maxPeople">
           <el-input-number v-model="form.maxPeople" :min="1" label="最大人数"></el-input-number>
         </el-form-item>
@@ -106,6 +113,8 @@
 
 <script setup name="Activity">
 import { listActivity, getActivity, delActivity, addActivity, updateActivity } from "@/api/biz/activity";
+// 【新增】引入报名接口
+import { addRegistration } from "@/api/biz/registration";
 import { getCurrentInstance, reactive, ref, toRefs } from 'vue';
 
 const { proxy } = getCurrentInstance();
@@ -164,6 +173,7 @@ function reset() {
     speaker: null,
     speakerInfo: null,
     location: null,
+    checkinCode: null, // 重置签到码
     startTime: null,
     endTime: null,
     maxPeople: 50,
@@ -206,6 +216,21 @@ function handleUpdate(row) {
     form.value = response.data;
     open.value = true;
     title.value = "修改活动";
+  });
+}
+
+/** 【新增】立即报名按钮操作 */
+function handleJoin(row) {
+  const activityId = row.activityId;
+  const activityTitle = row.title;
+  
+  proxy.$modal.confirm('确认要报名参加活动 "' + activityTitle + '" 吗？').then(function() {
+    // 构造参数，后端会自动提取当前登录用户的 userId
+    return addRegistration({ activityId: activityId });
+  }).then(() => {
+    proxy.$modal.msgSuccess("报名成功！请前往[报名管理]查看详情");
+  }).catch(() => {
+    // 取消也不做任何事
   });
 }
 
