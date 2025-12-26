@@ -8,35 +8,50 @@ $tiffany: #4AB7BD;
 $yellow: #FEC171;
 $panGreen: #30B08F;
 
-// 默认主题变量
-$menuText: #bfcbd9;
-$menuActiveText: #409eff;
-$menuBg: #304156;
-$menuHover: #263445;
+// ==============================================
+// 🎨 轻奢·学院风主题配置 (Luxury Academic Theme)
+// ==============================================
 
-// 浅色主题theme-light
+// 1. 侧边栏 (Sidebar) - 深邃午夜蓝风格
+// 背景色：使用更深邃、带有蓝紫色调的午夜蓝，比默认的黑灰更高级
+$menuBg: #0f172a;
+// 悬停色：稍微提亮，带一点光泽感
+$menuHover: #1e293b;
+// 文字颜色：使用低饱和度的银灰色，保证阅读舒适
+$menuText: #94a3b8;
+// 选中文字颜色：使用“香槟金”或“亮白”，突出重点
+$menuActiveText: #ffffff;
+// 选中背景色（可选）：如果要给选中项加背景，可以用这个
+$menuActiveBg: #1d4ed8; // 皇家蓝
+
+// 2. 浅色主题 (Light Mode)
 $menuLightBg: #ffffff;
-$menuLightHover: #f0f1f5;
-$menuLightText: #303133;
-$menuLightActiveText: #409EFF;
+$menuLightHover: #f8fafc;
+$menuLightText: #475569;
+$menuLightActiveText: #0f172a; // 选中时变为深色，形成对比
 
-// 基础变量
+// 3. 基础布局变量
 $base-sidebar-width: 200px;
 $sideBarWidth: 200px;
 
-// 菜单暗色变量
-$base-menu-color: #bfcbd9;
-$base-menu-color-active: #f4f4f5;
-$base-menu-background: #304156;
-$base-sub-menu-background: #1f2d3d;
-$base-sub-menu-hover: #001528;
+// 4. 导出给 JS 使用的变量 (对应上面的配色)
+$base-menu-color: $menuText;
+$base-menu-color-active: $menuActiveText;
+$base-menu-background: $menuBg;
+$base-sub-menu-background: #020617; // 子菜单更深，增加层级感
+$base-sub-menu-hover: $menuHover;
 
-// 组件变量
-$--color-primary: #409EFF;
-$--color-success: #67C23A;
-$--color-warning: #E6A23C;
-$--color-danger: #F56C6C;
-$--color-info: #909399;
+// 5. 组件主色调 (Brand Colors)
+// Primary: 宝石蓝 (Sapphire Blue) - 沉稳、专业
+$--color-primary: #2563eb;
+// Success: 翡翠绿 (Emerald)
+$--color-success: #10b981;
+// Warning: 琥珀金 (Amber)
+$--color-warning: #f59e0b;
+// Danger: 绯红 (Crimson)
+$--color-danger: #ef4444;
+// Info:  slate灰
+$--color-info: #64748b;
 
 :export {
   menuText: $menuText;
@@ -48,6 +63,7 @@ $--color-info: #909399;
   menuLightText: $menuLightText;
   menuLightActiveText: $menuLightActiveText;
   sideBarWidth: $sideBarWidth;
+
   // 导出基础颜色
   blue: $blue;
   lightBlue: $light-blue;
@@ -57,6 +73,7 @@ $--color-info: #909399;
   tiffany: $tiffany;
   yellow: $yellow;
   panGreen: $panGreen;
+
   // 导出组件颜色
   colorPrimary: $--color-primary;
   colorSuccess: $--color-success;
@@ -65,157 +82,137 @@ $--color-info: #909399;
   colorInfo: $--color-info;
 }
 
-// CSS变量定义
+// ==============================================
+// 🌓 CSS 变量定义 (支持动态换肤)
+// ==============================================
 :root {
-  /* 亮色模式变量 */
+  /* 侧边栏 */
   --sidebar-bg: #{$menuBg};
   --sidebar-text: #{$menuText};
   --menu-hover: #{$menuHover};
-  
-  --navbar-bg: #ffffff;
-  --navbar-text: #303133;
-  
-  /* splitpanes default-theme 变量 */
-  --splitpanes-default-bg: #ffffff;
-
-}
-
-// 暗黑模式变量
-html.dark {
-  /* 默认通用 */
-  --el-bg-color: #141414;
-  --el-bg-color-overlay: #1d1e1f;
-  --el-text-color-primary: #ffffff;
-  --el-text-color-regular: #d0d0d0;
-  --el-border-color: #434343;
-  --el-border-color-light: #434343;
-
-  /* 侧边栏 */
-  --sidebar-bg: #141414;
-  --sidebar-text: #ffffff;
-  --menu-hover: #2d2d2d;
   --menu-active-text: #{$menuActiveText};
 
-  /* 顶部导航栏 */
-  --navbar-bg: #141414;
-  --navbar-text: #ffffff;
-  --navbar-hover: #141414;
+  /* 顶部导航栏 - 纯白琉璃质感 */
+  --navbar-bg: #ffffff;
+  --navbar-text: #1e293b;
+  --navbar-border: #f1f5f9;
 
-  /* 标签栏 */
-  --tags-bg: #141414;
-  --tags-item-bg: #1d1e1f;
-  --tags-item-border: #303030;
-  --tags-item-text: #d0d0d0;
-  --tags-item-hover: #2d2d2d;
-  --tags-close-hover: #64666a;
+  /* 分割线与背景 */
+  --border-color-base: #e2e8f0;
+  --bg-color-base: #f8fafc; // 页面底色改为极淡的灰蓝，不刺眼
 
-  /* splitpanes 组件暗黑模式变量 */
-  --splitpanes-bg: #141414;
-  --splitpanes-border: #303030;
-  --splitpanes-splitter-bg: #1d1e1f;
-  --splitpanes-splitter-hover-bg: #2d2d2d;
-
-  /* blockquote 暗黑模式变量 */
-  --blockquote-bg: #1d1e1f;
-  --blockquote-border: #303030;
-  --blockquote-text: #d0d0d0;
-  
-  /* Cron 时间表达式 模式变量 */
-  --cron-border: #303030;
-
-  /* splitpanes default-theme 暗黑模式变量 */
-  --splitpanes-default-bg: #141414;
-
-  /* 侧边栏菜单覆盖 */
-   .sidebar-container {
-    .el-menu-item, .menu-title {
-      color: var(--el-text-color-regular);
-    }
-    & .theme-dark .nest-menu .el-sub-menu>.el-sub-menu__title,
-    & .theme-dark .el-sub-menu .el-menu-item {
-      background-color: var(--el-bg-color) !important;
-    }
-  }
-
-  /* 顶部栏栏菜单覆盖 */
-  .el-menu--horizontal {
-    .el-menu-item {
-      &:not(.is-disabled) {
-        &:hover,
-        &:focus {
-          background-color: var(--navbar-hover) !important;
-        }
-      }
-    }
-  }
-
-  /* 分割窗格覆盖 */
-  .splitpanes {
-    background-color: var(--splitpanes-bg);
-
-    .splitpanes__pane {
-      background-color: var(--splitpanes-bg);
-      border-color: var(--splitpanes-border);
-    }
-
-    .splitpanes__splitter {
-      background-color: var(--splitpanes-splitter-bg);
-      border-color: var(--splitpanes-border);
-
-      &:hover {
-        background-color: var(--splitpanes-splitter-hover-bg);
-      }
-
-      &:before,
-      &:after {
-        background-color: var(--splitpanes-border);
-      }
-    }
-  }
-
-  /* 表格样式覆盖 */
-  .el-table {
-    --el-table-header-bg-color: var(--el-bg-color-overlay) !important;
-    --el-table-header-text-color: var(--el-text-color-regular) !important;
-    --el-table-border-color: var(--el-border-color-light) !important;
-    --el-table-row-hover-bg-color: var(--el-bg-color-overlay) !important;
-
-    .el-table__header-wrapper, .el-table__fixed-header-wrapper {
-      th {
-        background-color: var(--el-bg-color-overlay, #f8f8f9) !important;
-        color: var(--el-text-color-regular, #515a6e);
-      }
-    }
-  }
-
-  /* 树组件高亮样式覆盖 */
-  .el-tree {
-    .el-tree-node.is-current > .el-tree-node__content {
-      background-color: var(--el-bg-color-overlay) !important;
-      color: var(--el-color-primary);
-    }
-
-    .el-tree-node__content:hover {
-      background-color: var(--el-bg-color-overlay);
-    }
-  }
-  
-  /* 下拉菜单样式覆盖 */
-  .el-dropdown-menu__item:not(.is-disabled):focus, .el-dropdown-menu__item:not(.is-disabled):hover{
-    background-color: var(--navbar-hover) !important;
-  }
-
-  /* blockquote样式覆盖 */
-  blockquote {
-    background-color: var(--blockquote-bg) !important;
-    border-left-color: var(--blockquote-border) !important;
-    color: var(--blockquote-text) !important;
-  }
-  
-  /* 时间表达式标题样式覆盖 */
-  .popup-result .title {
-    background: var(--cron-border);
-  }
-
+  /* splitpanes default-theme 变量 */
+  --splitpanes-default-bg: #ffffff;
 }
 
+// ==============================================
+// 🌑 暗黑模式 (Dark Mode) - 黑金奢华风
+// ==============================================
+html.dark {
+  /* 1. 全局基础色 - 使用高级灰黑，而非纯黑 */
+  --el-bg-color: #0B0C10;
+  /*主要背景：深空黑*/
+  --el-bg-color-overlay: #1F2833;
+  /*浮层背景：枪灰*/
+  --el-text-color-primary: #C5C6C7;
+  /*主要文字：银灰*/
+  --el-text-color-regular: #9ca3af;
+  /*常规文字*/
+  --el-border-color: #2d3748;
+  --el-border-color-light: #2d3748;
+
+  /* 2. 侧边栏 - 暗夜流金 */
+  --sidebar-bg: #020617;
+  /* 更深的午夜 */
+  --sidebar-text: #94a3b8;
+  --menu-hover: #1e293b;
+  --menu-active-text: #66FCF1;
+  /* 选中高亮：赛博青/电光蓝，非常有科技感 */
+
+  /* 3. 顶部导航栏 */
+  --navbar-bg: #0B0C10;
+  --navbar-text: #ffffff;
+  --navbar-hover: #1F2833;
+
+  /* 4. TagsView 标签栏 */
+  --tags-bg: #0B0C10;
+  --tags-item-bg: #1F2833;
+  --tags-item-border: #45A29E;
+  /* 边框带一点青色 */
+  --tags-item-text: #C5C6C7;
+  --tags-item-hover: #0b0c10;
+  --tags-close-hover: #ef4444;
+
+  /* 5. 组件覆盖优化 */
+
+  /* 表格：增加通透感 */
+  .el-table {
+    --el-table-header-bg-color: #1a202c !important;
+    --el-table-header-text-color: #e2e8f0 !important;
+    --el-table-row-hover-bg-color: #2d3748 !important;
+    --el-table-border-color: #2d3748 !important;
+
+    background-color: transparent !important;
+
+    th.el-table__cell {
+      background-color: #1a202c !important;
+    }
+  }
+
+  /* 侧边栏菜单微调 */
+  .sidebar-container {
+
+    .el-menu-item,
+    .menu-title {
+      color: var(--sidebar-text);
+    }
+
+    // 选中项增加左侧光条效果
+    .el-menu-item.is-active {
+      background-color: rgba(37, 99, 235, 0.1) !important; // 淡淡的蓝背景
+      border-right: 3px solid #66FCF1; // 右侧亮条
+    }
+
+    & .theme-dark .nest-menu .el-sub-menu>.el-sub-menu__title,
+    & .theme-dark .el-sub-menu .el-menu-item {
+      background-color: var(--sidebar-bg) !important;
+    }
+  }
+
+  /* 下拉菜单 */
+  .el-dropdown-menu {
+    background-color: var(--el-bg-color-overlay) !important;
+    border-color: var(--el-border-color) !important;
+  }
+
+  .el-dropdown-menu__item:not(.is-disabled):focus,
+  .el-dropdown-menu__item:not(.is-disabled):hover {
+    background-color: rgba(102, 252, 241, 0.1) !important;
+    color: #66FCF1 !important;
+  }
+
+  /* Card 卡片 */
+  .el-card {
+    background-color: #1F2833 !important;
+    border: 1px solid #2d3748 !important;
+    color: #C5C6C7 !important;
+  }
+
+  /* Splitpanes & Blockquote */
+  --splitpanes-bg: #0B0C10;
+  --splitpanes-border: #2d3748;
+  --splitpanes-splitter-bg: #1F2833;
+  --splitpanes-splitter-hover-bg: #45A29E;
+
+  --blockquote-bg: #1F2833;
+  --blockquote-border: #45A29E;
+  --blockquote-text: #e2e8f0;
+
+  blockquote {
+    background-color: var(--blockquote-bg) !important;
+    border-left: 4px solid var(--blockquote-border) !important;
+    color: var(--blockquote-text) !important;
+    border-radius: 4px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+}
