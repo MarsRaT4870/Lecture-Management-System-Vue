@@ -92,8 +92,12 @@ const queryParams = ref({
 function getList() {
   loading.value = true;
   listMessage(queryParams.value).then(res => {
-    msgList.value = res.rows;
-    total.value = res.total;
+    msgList.value = res.rows || [];
+    total.value = res.total || 0;
+    loading.value = false;
+  }).catch(err => {
+    console.error('获取消息列表失败', err);
+    proxy.$modal.msgError('获取消息列表失败，请稍后重试');
     loading.value = false;
   });
   // 顺便刷新未读数
@@ -102,7 +106,10 @@ function getList() {
 
 function refreshUnread() {
   getUnreadCount().then(res => {
-    unreadNum.value = res.data;
+    unreadNum.value = res.data || 0;
+  }).catch(err => {
+    console.error('获取未读消息数失败', err);
+    // 静默失败，不影响主功能
   });
 }
 
@@ -119,6 +126,8 @@ function handleRead(item) {
   readMessage(item.messageId).then(() => {
     item.readFlag = '1';
     refreshUnread(); // 刷新计数
+  }).catch(err => {
+    proxy.$modal.msgError(err.msg || '标记已读失败');
   });
 }
 
@@ -128,6 +137,8 @@ function handleReadAll() {
   }).then(() => {
     getList();
     proxy.$modal.msgSuccess("操作成功");
+  }).catch(err => {
+    proxy.$modal.msgError(err.msg || '操作失败，请稍后重试');
   });
 }
 
@@ -137,6 +148,8 @@ function handleDelete(item) {
   }).then(() => {
     getList();
     proxy.$modal.msgSuccess("删除成功");
+  }).catch(err => {
+    proxy.$modal.msgError(err.msg || '删除失败，请稍后重试');
   });
 }
 

@@ -31,12 +31,26 @@
         <el-card :body-style="{ padding: '0px' }" class="activity-card" shadow="hover" @click="handleDetail(item)">
           <div class="card-cover-wrapper">
             <div class="card-cover-img" :style="{ backgroundImage: `url(${getCoverImage(item)})` }"></div>
+            
             <div class="card-cover-mask">
               <div class="card-badges">
                 <el-tag :type="item.activityType === '1' ? '' : 'warning'" effect="dark" class="glass-tag">
                   {{ item.activityType === '1' ? '学术讲座' : '校园活动' }}
                 </el-tag>
-                <el-tag v-if="item.status === '2'" type="danger" effect="dark" round>已结束</el-tag>
+                
+                <el-tag 
+                  v-if="item.status === '2' && item.visible === '1'" 
+                  type="danger" 
+                  effect="light" 
+                  round
+                >
+                  <el-icon><Timer /></el-icon>
+                  <span style="margin-left: 4px; font-weight: bold; font-size: 12px;">
+                      {{ item.countdownStr || '计算中...' }}
+                  </span>
+                </el-tag>
+
+                <el-tag v-else-if="item.status === '2'" type="danger" effect="dark" round>已结束</el-tag>
                 <el-tag v-else-if="isExpired(item)" type="info" effect="dark" round>报名截止</el-tag>
                 <el-tag v-else type="success" effect="dark" round>报名中</el-tag>
               </div>
@@ -83,6 +97,7 @@
           </div>
         </el-card>
       </el-col>
+      
       <el-col :span="24" v-if="!loading && activityList.length === 0">
         <el-empty description="暂无符合条件的活动，换个词试试？" />
       </el-col>
@@ -114,7 +129,7 @@
                 <span v-else-if="detailForm.applicantType === '3'">教师个人</span>
                 <span v-else>其他</span>
              </el-descriptions-item>
-             <el-descriptions-item label="当前报名">{{ detailForm.regCount || 0 }} 人</el-descriptions-item>
+             <el-descriptions-item label="当前报名">{{ detailForm.regCount !== undefined ? detailForm.regCount : '统计中' }} 人</el-descriptions-item>
              <el-descriptions-item label="报名截止">
                <span class="text-danger">{{ parseTime(detailForm.regDeadline) }}</span>
              </el-descriptions-item>
@@ -142,10 +157,10 @@
 </template>
 
 <script setup name="Market">
-import { listActivity, getActivity } from "@/api/biz/activity";
+import { listActivity } from "@/api/biz/activity";
 import { applyActivity, listRegistration } from "@/api/biz/registration"; 
 import { parseTime } from "@/utils/ruoyi";
-import { getCurrentInstance, reactive, ref, toRefs } from 'vue';
+import { getCurrentInstance, reactive, ref, toRefs, onMounted, onUnmounted } from 'vue';
 import { Search, Refresh, User, Clock, Location, UserFilled, Timer, MapLocation } from '@element-plus/icons-vue'
 import useUserStore from '@/store/modules/user'
 
@@ -159,6 +174,7 @@ const total = ref(0);
 const detailOpen = ref(false);
 const detailForm = ref({});
 const myRegIds = ref([]); 
+let timer = null; // 定时器引用
 
 const data = reactive({
   queryParams: {
@@ -166,12 +182,13 @@ const data = reactive({
     pageSize: 8, 
     title: null,
     activityType: null,
-    visible: '1' // 【重要】强制只显示可见活动（过滤掉已归档）
+    visible: '1' // 【重要】强制只显示可见活动。后端将visible置为0后，前端不再显示。
   }
 });
 
 const { queryParams } = toRefs(data);
 
+// 随机封面图资源
 const lectureImages = [
   'https://images.unsplash.com/photo-1544531586-fde5298cdd40?q=80&w=800', 
   'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?q=80&w=800', 
@@ -193,20 +210,59 @@ function getCoverImage(item) {
   return item.activityType === '1' ? lectureImages[id % lectureImages.length] : activityImages[id % activityImages.length];
 }
 
+// 【核心】倒计时计算函数
+const calcCountdowns = () => {
+  const now = new Date().getTime();
+  
+  activityList.value.forEach(item => {
+    // 只有“已结束”且“可见”的活动需要显示倒计时
+    if (item.status === '2' && item.visible === '1') {
+      const endTime = new Date(item.endTime).getTime();
+      // 归档时间 = 结束时间 + 3天 (毫秒数: 3 * 24 * 60 * 60 * 1000)
+      const archiveTime = endTime + 259200000;
+      const diff = archiveTime - now;
+
+      if (diff > 0) {
+        // 计算天、时、分
+        const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        
+        // 格式化字符串
+        let str = "下架: ";
+        if (d > 0) str += `${d}天`;
+        str += `${h}时${m}分`;
+        item.countdownStr = str;
+      } else {
+        item.countdownStr = "即将下架";
+      }
+    }
+  });
+};
+
 function getList() {
   loading.value = true;
   listActivity(queryParams.value).then(response => {
-    activityList.value = response.rows;
-    total.value = response.total;
+    activityList.value = response.rows || [];
+    total.value = response.total || 0;
     loading.value = false;
     getMyRegistrationList();
+    // 数据加载完毕后，立即触发计算一次倒计时
+    calcCountdowns();
+  }).catch(err => {
+    console.error('获取活动列表失败', err);
+    proxy.$modal.msgError('获取活动列表失败，请稍后重试');
+    loading.value = false;
   });
 }
 
 function getMyRegistrationList() {
   if (!userStore.userId) return;
   listRegistration({ userId: userStore.userId }).then(res => {
-    myRegIds.value = res.rows.map(item => item.activityId);
+    myRegIds.value = (res.rows || []).map(item => item.activityId);
+  }).catch(err => {
+    console.error('获取我的报名列表失败', err);
+    // 静默失败，不影响主列表显示
   });
 }
 
@@ -222,7 +278,8 @@ function getBtnText(item) {
   if (myRegIds.value.includes(item.activityId)) return "已报名";
   if (item.status === '2') return '已结束';
   if (isExpired(item)) return '报名截止';
-  if (item.maxPeople > 0 && item.regCount >= item.maxPeople) return "名额已满";
+  // regCount 字段可能不存在，需要后端返回
+  if (item.maxPeople > 0 && item.regCount !== undefined && item.regCount >= item.maxPeople) return "名额已满";
   return '立即报名';
 }
 
@@ -230,7 +287,8 @@ function isBtnDisabled(item) {
   if (myRegIds.value.includes(item.activityId)) return true;
   if (item.status === '2') return true;
   if (isExpired(item)) return true;
-  if (item.maxPeople > 0 && item.regCount >= item.maxPeople) return true;
+  // regCount 字段可能不存在，需要后端返回
+  if (item.maxPeople > 0 && item.regCount !== undefined && item.regCount >= item.maxPeople) return true;
   return false;
 }
 
@@ -243,16 +301,32 @@ function handleApply(id) {
   proxy.$modal.confirm('确认报名参加该活动吗?').then(() => {
     return applyActivity({ activityId: id });
   }).then(res => {
-    const isQueue = res.msg.includes("候补");
-    proxy.$alert(res.msg, isQueue ? '进入候补' : '报名成功', {
+    const isQueue = res.msg && res.msg.includes("候补");
+    proxy.$alert(res.msg || '报名成功', isQueue ? '进入候补' : '报名成功', {
       confirmButtonText: '确定',
       type: isQueue ? 'warning' : 'success',
-      callback: () => { detailOpen.value = false; getList(); }
+      callback: () => { 
+        detailOpen.value = false; 
+        getList(); 
+        getMyRegistrationList(); // 刷新报名状态
+      }
     });
-  }).catch(() => {});
+  }).catch(err => {
+    proxy.$modal.msgError(err.msg || '报名失败，请稍后重试');
+  });
 }
 
-getList();
+// 生命周期挂载
+onMounted(() => {
+  getList(); 
+  // 启动定时器，每分钟刷新一次倒计时
+  timer = setInterval(calcCountdowns, 60 * 1000); 
+});
+
+// 组件销毁前清理
+onUnmounted(() => {
+  if (timer) clearInterval(timer);
+});
 </script>
 
 <style scoped lang="scss">

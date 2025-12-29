@@ -81,3 +81,21 @@ export function auditActivity(data) {
   })
 }
 
+// 获取参与热力图数据
+export function getHeatmapData(params) {
+  return request({
+    url: '/biz/activity/heatmap',
+    method: 'get',
+    params: params
+  })
+}
+
+// 获取反馈趋势统计
+export function getFeedbackTrend(params) {
+  return request({
+    url: '/biz/activity/feedback/trend',
+    method: 'get',
+    params: params
+  })
+}
+

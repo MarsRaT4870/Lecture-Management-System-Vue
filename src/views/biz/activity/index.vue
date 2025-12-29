@@ -281,7 +281,7 @@ import { listActivity, getActivity, delActivity, addActivity, updateActivity, ge
 import { listAllVenue } from "@/api/biz/venue";
 import { parseTime } from "@/utils/ruoyi";
 import request from '@/utils/request'
-import VueQr from 'vue-qr/src/packages/vue-qr.vue';
+import VueQr from 'vue-qr';
 import { getCurrentInstance, reactive, ref, toRefs, computed } from 'vue';
 
 const { proxy } = getCurrentInstance();
@@ -378,13 +378,24 @@ const { queryParams, form, rules } = toRefs(data);
 function getList() {
   loading.value = true;
   listActivity(queryParams.value).then(response => {
-    activityList.value = response.rows;
-    total.value = response.total;
+    activityList.value = response.rows || [];
+    total.value = response.total || 0;
+    loading.value = false;
+  }).catch(err => {
+    console.error('获取活动列表失败', err);
+    proxy.$modal.msgError('获取活动列表失败，请稍后重试');
     loading.value = false;
   });
 }
 
-function getVenueOptions() { listAllVenue().then(res => { venueOptions.value = res.data; }); }
+function getVenueOptions() { 
+  listAllVenue().then(res => { 
+    venueOptions.value = res.data || []; 
+  }).catch(err => {
+    console.error('获取场地列表失败', err);
+    proxy.$modal.msgError('获取场地列表失败');
+  }); 
+}
 
 function handleVenueChange(val) {
   const selectedVenue = venueOptions.value.find(item => item.venueId === val);
@@ -427,29 +438,48 @@ function handleUpdate(row) {
   reset();
   const activityId = row.activityId || ids.value;
   getActivity(activityId).then(response => {
-    form.value = response.data;
+    form.value = response.data || {};
     open.value = true;
     title.value = "修改活动";
     if (form.value.venueId) {
       const v = venueOptions.value.find(item => item.venueId === form.value.venueId);
       if (v) currentVenueCapacity.value = v.capacity;
     }
+  }).catch(err => {
+    proxy.$modal.msgError(err.msg || '获取活动详情失败');
   });
 }
 
 function handleArchive(row) {
-  proxy.$modal.confirm('确认要下架活动《' + row.title + '》吗？下架后活动将归档，不再在大厅显示。').then(() => archiveActivity(row.activityId)).then(() => {
-    getList(); proxy.$modal.msgSuccess("下架归档成功");
-  });
+  proxy.$modal.confirm('确认要下架活动《' + row.title + '》吗？下架后活动将归档，不再在大厅显示。')
+    .then(() => archiveActivity(row.activityId))
+    .then(() => {
+      getList(); 
+      proxy.$modal.msgSuccess("下架归档成功");
+    }).catch(err => {
+      proxy.$modal.msgError(err.msg || '下架失败，请稍后重试');
+    });
 }
 
 function submitForm() {
   proxy.$refs["formRef"].validate(valid => {
     if (valid) {
       if (form.value.activityId != null) {
-        updateActivity(form.value).then(() => { proxy.$modal.msgSuccess("修改成功"); open.value = false; getList(); });
+        updateActivity(form.value).then(() => { 
+          proxy.$modal.msgSuccess("修改成功"); 
+          open.value = false; 
+          getList(); 
+        }).catch(err => {
+          proxy.$modal.msgError(err.msg || '修改失败，请稍后重试');
+        });
       } else {
-        addActivity(form.value).then(() => { proxy.$modal.msgSuccess("申报成功"); open.value = false; getList(); });
+        addActivity(form.value).then(() => { 
+          proxy.$modal.msgSuccess("申报成功"); 
+          open.value = false; 
+          getList(); 
+        }).catch(err => {
+          proxy.$modal.msgError(err.msg || '申报失败，请稍后重试');
+        });
       }
     }
   });
@@ -457,48 +487,168 @@ function submitForm() {
 
 function handleDelete(row) {
   const activityIds = row.activityId || ids.value;
-  proxy.$modal.confirm('确认删除？').then(() => delActivity(activityIds)).then(() => { getList(); proxy.$modal.msgSuccess("删除成功"); });
+  proxy.$modal.confirm('确认删除？').then(() => delActivity(activityIds))
+    .then(() => { 
+      getList(); 
+      proxy.$modal.msgSuccess("删除成功"); 
+    }).catch(err => {
+      proxy.$modal.msgError(err.msg || '删除失败，请稍后重试');
+    });
 }
 
 function handleQrCode(row) { qrVisible.value = true; form.value.activityId = row.activityId; refreshQrCode(row.activityId); }
-function refreshQrCode(id) { getActivityQrCode(id || form.value.activityId).then(res => { qrCodeText.value = res.msg; }); }
-function handleAudit(row) { auditForm.value = { activityId: row.activityId, auditStatus: "2", remark: "" }; auditOpen.value = true; }
+function refreshQrCode(id) { 
+  getActivityQrCode(id || form.value.activityId)
+    .then(res => { 
+      qrCodeText.value = res.msg || ''; 
+    }).catch(err => {
+      proxy.$modal.msgError(err.msg || '获取二维码失败');
+    }); 
+}
+
+function handleAudit(row) { 
+  auditForm.value = { activityId: row.activityId, auditStatus: "2", remark: "" }; 
+  auditOpen.value = true; 
+}
+
 function submitAudit() {
-  if (auditForm.value.auditStatus === '3' && !auditForm.value.remark) { proxy.$modal.msgError("驳回必填意见"); return; }
-  auditActivity(auditForm.value).then(() => { proxy.$modal.msgSuccess("审核完成"); auditOpen.value = false; getList(); });
+  if (auditForm.value.auditStatus === '3' && !auditForm.value.remark) { 
+    proxy.$modal.msgError("驳回必填意见"); 
+    return; 
+  }
+  auditActivity(auditForm.value)
+    .then(() => { 
+      proxy.$modal.msgSuccess("审核完成"); 
+      auditOpen.value = false; 
+      getList(); 
+    }).catch(err => {
+      proxy.$modal.msgError(err.msg || '审核失败，请稍后重试');
+    });
 }
 
 getList();
 getVenueOptions();
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .app-container {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   color: #333;
+  background: #f5f7fa;
+  padding: 20px;
+  min-height: calc(100vh - 84px);
 }
+
 .common-table {
   font-size: 14px;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.05);
 }
+
 .time-cell {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
+
 .time-row {
   display: flex;
   align-items: center;
   font-size: 13px;
+  
+  .label {
+    color: #909399;
+    width: 36px;
+    text-align: right;
+    margin-right: 6px;
+    font-weight: 500;
+  }
+  
+  .value {
+    font-family: Consolas, Monaco, monospace;
+    color: #606266;
+  }
 }
-.time-row .label {
-  color: #909399;
-  width: 36px;
-  text-align: right;
-  margin-right: 6px;
+
+.text-expired { 
+  color: #f56c6c; 
+  font-weight: 500;
 }
-.time-row .value {
-  font-family: Consolas, Monaco, monospace;
+
+.text-normal { 
+  color: #606266; 
 }
-.text-expired { color: #f56c6c; }
-.text-normal { color: #606266; }
+
+.form-tips {
+  margin-top: 5px;
+  line-height: 1.6;
+}
+
+.ml10 {
+  margin-left: 10px;
+}
+
+// 优化搜索表单样式
+:deep(.el-form) {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.05);
+}
+
+// 优化按钮组样式
+:deep(.mb8) {
+  background: #fff;
+  padding: 15px 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.05);
+}
+
+// 优化对话框样式
+:deep(.el-dialog) {
+  border-radius: 8px;
+  
+  .el-dialog__header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    padding: 20px;
+    border-radius: 8px 8px 0 0;
+    
+    .el-dialog__title {
+      color: #fff;
+      font-weight: 600;
+    }
+    
+    .el-dialog__close {
+      color: #fff;
+      font-size: 20px;
+      
+      &:hover {
+        color: #f0f0f0;
+      }
+    }
+  }
+  
+  .el-dialog__body {
+    padding: 30px;
+  }
+}
+
+// 优化二维码对话框
+.el-dialog {
+  :deep(.el-dialog__body) {
+    text-align: center;
+    padding: 30px;
+    
+    p {
+      margin-top: 15px;
+      color: #666;
+      font-size: 14px;
+    }
+  }
+}
 </style>

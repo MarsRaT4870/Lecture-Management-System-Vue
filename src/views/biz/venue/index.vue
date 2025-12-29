@@ -154,8 +154,12 @@ const rules = reactive({
 function getList() {
   loading.value = true;
   listVenue(queryParams.value).then(response => {
-    venueList.value = response.rows;
-    total.value = response.total;
+    venueList.value = response.rows || [];
+    total.value = response.total || 0;
+    loading.value = false;
+  }).catch(err => {
+    console.error('获取场地列表失败', err);
+    proxy.$modal.msgError('获取场地列表失败，请稍后重试');
     loading.value = false;
   });
 }
@@ -214,12 +218,16 @@ function submitForm() {
           proxy.$modal.msgSuccess("修改成功");
           open.value = false;
           getList();
+        }).catch(err => {
+          proxy.$modal.msgError(err.msg || '修改失败，请稍后重试');
         });
       } else {
         addVenue(form.value).then(response => {
           proxy.$modal.msgSuccess("新增成功");
           open.value = false;
           getList();
+        }).catch(err => {
+          proxy.$modal.msgError(err.msg || '新增失败，请稍后重试');
         });
       }
     }
@@ -233,7 +241,11 @@ function handleDelete(row) {
   }).then(() => {
     getList();
     proxy.$modal.msgSuccess("删除成功");
-  }).catch(() => {});
+  }).catch(err => {
+    if (err && err.msg) {
+      proxy.$modal.msgError(err.msg);
+    }
+  });
 }
 
 getList();

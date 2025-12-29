@@ -14,14 +14,49 @@
     <div v-if="!isAdmin" class="cert-wall">
       <div class="cert-summary bg-gradient">
         <div class="summary-item">
-          <div class="num">{{ totalCredit }}</div>
+          <div class="num">{{ displayTotalCredit }}</div>
           <div class="label">累计学分</div>
         </div>
         <div class="summary-item">
           <div class="num">{{ creditList.length }}</div>
           <div class="label">获得证书</div>
         </div>
+        <div class="summary-item clickable" @click="toggleRanking">
+          <div class="num">
+            <el-icon><Trophy /></el-icon>
+          </div>
+          <div class="label">学分排行榜</div>
+        </div>
       </div>
+
+      <!-- 学分排行榜 -->
+      <el-card v-if="showRanking" class="ranking-card mt20" shadow="hover">
+        <template #header>
+          <div class="card-header">
+            <span><el-icon><Trophy /></el-icon> 学分排行榜 Top 10</span>
+            <el-button link type="primary" @click="toggleRanking">收起</el-button>
+          </div>
+        </template>
+        <div v-loading="rankingLoading">
+          <el-table :data="rankingList" stripe>
+            <el-table-column type="index" label="排名" width="80" align="center">
+              <template #default="scope">
+                <span v-if="scope.$index < 3" class="rank-medal" :class="`rank-${scope.$index + 1}`">
+                  <el-icon><Trophy /></el-icon>
+                </span>
+                <span v-else>{{ scope.$index + 1 }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="姓名" prop="userName" />
+            <el-table-column label="总学分" prop="totalCredits" align="center">
+              <template #default="scope">
+                <span class="credit-num">{{ scope.row.totalCredits?.toFixed(1) || '0.0' }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="获得证书数" prop="certCount" align="center" />
+          </el-table>
+        </div>
+      </el-card>
 
       <div class="cert-grid" v-loading="loading">
         <el-empty v-if="creditList.length === 0" description="暂无证书，快去参加活动吧" />
@@ -34,7 +69,7 @@
             <div class="cert-body">
               <div class="cert-name">{{ item.userName }}</div>
               <div class="cert-text">
-                在 <span class="highlight">《{{ item.activityName }}》</span> 活动中表现优异，完成课程要求。
+                在 <span class="highlight">《{{ item.activityName || `活动 #${item.activityId}` }}》</span> 活动中表现优异，完成课程要求。
               </div>
               <div class="cert-footer">
                 <div class="cert-no">NO.{{ item.certificateNo }}</div>
@@ -48,10 +83,26 @@
 
     <div v-else>
        <el-table v-loading="loading" :data="creditList">
-          <el-table-column label="姓名" prop="userName" />
-          <el-table-column label="学院" prop="deptName" />
-          <el-table-column label="活动主题" prop="activityName" />
-          <el-table-column label="学分" prop="creditVal" />
+          <el-table-column label="姓名" prop="userName">
+            <template #default="scope">
+              {{ scope.row.userName || '-' }}
+            </template>
+          </el-table-column>
+          <el-table-column label="学院" prop="deptName">
+            <template #default="scope">
+              {{ scope.row.deptName || '-' }}
+            </template>
+          </el-table-column>
+          <el-table-column label="活动主题" prop="activityName">
+            <template #default="scope">
+              {{ scope.row.activityName || `活动 #${scope.row.activityId}` }}
+            </template>
+          </el-table-column>
+          <el-table-column label="学分" prop="creditValue">
+            <template #default="scope">
+              {{ scope.row.creditValue || '0.0' }}
+            </template>
+          </el-table-column>
           <el-table-column label="证书编号" prop="certificateNo" />
           <el-table-column label="发放时间" prop="grantTime" width="180">
             <template #default="scope">{{ parseTime(scope.row.grantTime) }}</template>
@@ -72,7 +123,7 @@
            <div class="paper-content">
              <p class="user-line">授予：<span class="name">{{ currentCert.userName }}</span> 同学</p>
              <p class="text-line">
-               鉴于您在 <span class="act-name">“{{ currentCert.activityName }}”</span> 
+               鉴于您在 <span class="act-name">"{{ currentCert.activityName || `活动 #${currentCert.activityId}` }}"</span> 
                活动中积极参与，表现优异，特发此证，以资鼓励。
              </p>
              <p class="credit-line">计入第二课堂学分：<strong>{{ currentCert.creditVal }} 分</strong></p>
@@ -99,20 +150,27 @@
 </template>
 
 <script setup name="Credit">
-import { listCredit } from "@/api/biz/credit";
-import { getCurrentInstance, ref, computed } from 'vue';
+import { listCredit, getMyTotalCredits, getCreditRanking } from "@/api/biz/credit";
+import { getCurrentInstance, ref, computed, onMounted } from 'vue';
 import { parseTime } from "@/utils/ruoyi";
 import { Trophy, Stamp } from '@element-plus/icons-vue';
-// 假设有个简单的判断管理员的方法，或者直接根据角色判断
-// 这里简单演示：如果你有 admin 权限字符就是管理员，否则是学生
-// 实际请用 useUserStore 或 v-hasRole 判断
+import useUserStore from '@/store/modules/user'
 
 const { proxy } = getCurrentInstance();
+const userStore = useUserStore();
 
 const creditList = ref([]);
 const loading = ref(true);
 const total = ref(0);
-const isAdmin = ref(false); // ⚠️ 注意：实际项目中请用权限判断 proxy.$auth.hasRole("admin")
+const myTotalCredit = ref(0);
+const rankingList = ref([]);
+const rankingLoading = ref(false);
+const showRanking = ref(false);
+
+// 判断是否为管理员
+const isAdmin = computed(() => {
+  return userStore.roles && userStore.roles.includes('admin');
+});
 
 const queryParams = ref({
   pageNum: 1,
@@ -123,21 +181,61 @@ const queryParams = ref({
 const certOpen = ref(false);
 const currentCert = ref({});
 
-const totalCredit = computed(() => {
-  return creditList.value.reduce((sum, item) => sum + item.creditVal, 0).toFixed(1);
+// 计算总学分（从列表计算，如果列表为空则使用API获取的值）
+const displayTotalCredit = computed(() => {
+  if (creditList.value.length > 0) {
+    return creditList.value.reduce((sum, item) => sum + (item.creditVal || 0), 0).toFixed(1);
+  }
+  return myTotalCredit.value.toFixed(1);
 });
 
 function getList() {
   loading.value = true;
-  // 模拟判断权限，实际请根据你的登录角色
-  // isAdmin.value = proxy.$auth.hasRole("admin"); 
-  
   listCredit(queryParams.value).then(res => {
-    creditList.value = res.rows;
-    total.value = res.total;
+    creditList.value = res.rows || [];
+    total.value = res.total || 0;
+    loading.value = false;
+  }).catch(err => {
+    console.error('获取学分列表失败', err);
+    proxy.$modal.msgError('获取学分列表失败，请稍后重试');
     loading.value = false;
   });
+  
+  // 如果不是管理员，获取总学分
+  if (!isAdmin.value) {
+    getMyTotalCredits().then(res => {
+      myTotalCredit.value = res.data || 0;
+    }).catch(err => {
+      console.error('获取总学分失败', err);
+    });
+  }
 }
+
+function loadRanking() {
+  rankingLoading.value = true;
+  getCreditRanking(10).then(res => {
+    rankingList.value = res.data || [];
+    rankingLoading.value = false;
+  }).catch(err => {
+    console.error('获取排行榜失败', err);
+    proxy.$modal.msgError('获取排行榜失败，请稍后重试');
+    rankingLoading.value = false;
+  });
+}
+
+function toggleRanking() {
+  showRanking.value = !showRanking.value;
+  if (showRanking.value && rankingList.value.length === 0) {
+    loadRanking();
+  }
+}
+
+onMounted(() => {
+  getList();
+  if (!isAdmin.value) {
+    loadRanking();
+  }
+});
 
 function handleQuery() {
   queryParams.value.pageNum = 1;
@@ -183,9 +281,63 @@ getList();
   
   .summary-item {
     text-align: center;
-    .num { font-size: 40px; font-weight: bold; font-family: 'Georgia', serif; }
+    .num { 
+      font-size: 40px; 
+      font-weight: bold; 
+      font-family: 'Georgia', serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
     .label { font-size: 14px; opacity: 0.8; margin-top: 5px; }
+    
+    &.clickable {
+      cursor: pointer;
+      transition: all 0.3s;
+      padding: 10px;
+      border-radius: 8px;
+      
+      &:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: scale(1.05);
+      }
+    }
   }
+}
+
+/* 排行榜卡片 */
+.ranking-card {
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 16px;
+    font-weight: 600;
+    
+    span {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+  }
+  
+  .rank-medal {
+    font-size: 20px;
+    &.rank-1 { color: #FFD700; } /* 金牌 */
+    &.rank-2 { color: #C0C0C0; } /* 银牌 */
+    &.rank-3 { color: #CD7F32; } /* 铜牌 */
+  }
+  
+  .credit-num {
+    font-size: 18px;
+    font-weight: bold;
+    color: #409EFF;
+  }
+}
+
+.mt20 {
+  margin-top: 20px;
 }
 
 /* 证书墙 */
